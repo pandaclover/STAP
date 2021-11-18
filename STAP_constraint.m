@@ -96,15 +96,15 @@ Rx       = Xm*Xm'./L;
 
 S_st     = exp(1i*(2*pi*settings.IF*settings.ts) .* (0:N-1).');
 
-% % 空域信号方向约束
-% S_ss     = exp(1i*(2*pi*settings.d*sin(settings.Stheta*pi/180)/settings.lambda) ...
-%          .* (0:settings.RecNum-1).');
+% 空域信号方向约束
+S_ss     = exp(1i*(2*pi*settings.d*sin(settings.Stheta*pi/180)/settings.lambda) ...
+         .* (0:settings.RecNum-1).');
 
-% S        = kron(S_ss,S_st);
+S        = kron(S_ss,S_st);
 
 % 功率倒置方法
-S        = zeros(M*N,1);
-S(1)     = 1;
+% S        = zeros(M*N,1);
+% S(1)     = 1;
 
 
 w_opt    = (S'*inv(Rx)*S)^(-1)*inv(Rx)*S;

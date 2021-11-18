@@ -14,11 +14,11 @@ t     = (0:settings.SampleNum-1).*settings.ts;
 t     = t - settings.T/2;
 
 % 调频相位
-Phase = exp(1i*pi*settings.mu.*t.^2) ...
-      + 2*pi.*rand(settings.WBInNum,settings.SampleNum);
+Phase = exp(1i*pi*settings.mu.*t.^2);
 
 % 中频载波
-Carr  = exp(1i*2*pi.*(settings.WBIF(1:settings.WBInNum).').*t);
+Carr  = exp(1i*2*pi.*(settings.WBIF(1:settings.WBInNum).').*t) ...
+      .* exp(1i*2*pi*rand(settings.WBInNum,1));
 
 I_wb  = Carr.*Phase;
 

@@ -28,10 +28,11 @@ settings.N          = 1024;                          % FFT点数
 settings.M          = 50;                           % 分段数
 settings.SampleNum  = settings.N*settings.M;         % 接收信号快拍数
 settings.orders     = 16;                            % 延迟单元数为16
+settings.L          = 5000;                          % 数据量
 settings.T          = settings.SampleNum*settings.ts;
 
 %--------------------- 干扰信号参数设置 -----------------------------------
-settings.WBInNum    = 2;                             % 干扰信号数
+settings.WBInNum    = 3;                             % 干扰信号数
 settings.B          = 20e6;                          % 干扰信号带宽
 settings.mu         = settings.B/settings.T;         % 调频率
 settings.Pi         = 100e3;                         % 干扰信号功率 [W]

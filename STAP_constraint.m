@@ -28,6 +28,7 @@ Am            = sqrt(settings.Ps);
 Xs            = Am.*Xs;
 
 % 产生宽带干扰信号
+% I_wb          = GenWBInterSig();
 I_wb          = GenWBInterSig2();
 Ai            = sqrt(settings.Pi);
 I_wb          = Ai.*I_wb;
@@ -52,33 +53,14 @@ Ps_in         = sum(sum(abs(S_in).^2))/settings.SampleNum/settings.RecNum;
 Pi_in         = sum(sum(abs(Wb_in).^2))/settings.SampleNum/settings.RecNum;
 Pn_in         = sum(sum(abs(Noise).^2))/settings.SampleNum/settings.RecNum;
 
+% 输入SINR
+SINR_in       = 10*log10(Ps_in/(Pi_in + Pn_in));
+
 %----------------------- 用空时导向矢量直接产生Xm -------------------------
 M             = settings.RecNum;                        % 阵元数
-L             = settings.SampleNum/2;                   % 数据量
+L             = settings.L;                             % 数据量
 N             = settings.orders;                        % 抽头数
 Xm            = zeros(N*M,L);                           % Xm向量初始化
-
-% % 有用信号+干扰信号入射方向
-% Theta         = [settings.Stheta,settings.Itheta(1:settings.WBInNum)];
-% 
-% % 时间导向矢量
-% S_t           = exp(1i*(2*pi*settings.IF*settings.ts).*(0:N-1).');
-% 
-% for index = 1:length(Theta)
-%     
-%     theta = Theta(index)*pi/180;
-%     
-%     S_s   = exp(1i*(2*pi*settings.d*sin(theta)/settings.lambda).*(0:M-1).');
-%     
-%     S     = kron(S_s,S_t);
-% 
-%     Xm    = S*SigVector(index,1:L) + Xm;
-%         
-% end % for index = 1:length(Theta)
-% 
-% % 加入噪声
-% Noise     = An.*randn(N*M,L) + An.*1i.*randn(N*M,L); 
-% Xm        = Xm + Noise;
 
 %------------------------ 手动构造Xm矢量 ----------------------------------
 for RecIndex = 1:M
@@ -111,6 +93,14 @@ S        = kron(S_s,S_t);
 % S(1)     = 1;
 
 w_opt    = (S'*inv(Rx)*S)^(-1)*inv(Rx)*S;
+
+[Ps_out,Pi_out,Pn_out]    = OutputPowerCalculate(w_opt,S_in,Wb_in,Noise);
+
+% 输出SINR
+SINR_out = 10*log10(Ps_out/(Pi_out + Pn_out));
+
+% 干扰抑制度
+JRI      = 10*log10(Pi_in/Pi_out); 
 
 %------------------------- 空频二维阵列响应图 -----------------------------
 Theta    = -100:0.1:100;

@@ -1,7 +1,10 @@
 %{
   ------------------ 含约束条件下的空时自适应处理算法 ---------------------
   1.有用信号采用GPS L1信号
-  2.干扰信号采用线性调频信号  
+  2.干扰信号采用线性调频信号
+  --- LFM信号仍存在问题，考虑使用宽带随机调相信号
+
+  3.考虑宽带信号的建模
 
   -------------------------------------------------------------------------
   [1] 卫星导航定位接收机抗干扰技术研究，任超
@@ -25,7 +28,7 @@ Am            = sqrt(settings.Ps);
 Xs            = Am.*Xs;
 
 % 产生宽带干扰信号
-I_wb          = GenWBInterSig();
+I_wb          = GenWBInterSig2();
 Ai            = sqrt(settings.Pi);
 I_wb          = Ai.*I_wb;
 
@@ -35,17 +38,19 @@ An            = sqrt(Pn/2);
 Noise         = An.*randn(settings.RecNum,settings.SampleNum) ...
               + 1i.*An.*randn(settings.RecNum,settings.SampleNum);
 
-% 画出它们的功率谱密度 --- 但是因为采样点数比较少，所以画出来的图不够准确
+% 画出它们的功率谱密度
 % PSD_Plot(Xs,I_wb);
 
 %----------------------- 阵列接收信号建模 ---------------------------------
-Alpha_mat     = GenArraySteerVectorMatrix();
-
-% 信号矢量
-SigVector     = [Xs;I_wb];
+[S_in,Wb_in]  = GenArraySignal(Xs,I_wb);
 
 % 阵列接收信号
-Yt            = Alpha_mat*[Xs;I_wb] + Noise;
+Yt            = S_in + Wb_in + Noise;
+
+% 输入信号功率
+Ps_in         = sum(sum(abs(S_in).^2))/settings.SampleNum/settings.RecNum;
+Pi_in         = sum(sum(abs(Wb_in).^2))/settings.SampleNum/settings.RecNum;
+Pn_in         = sum(sum(abs(Noise).^2))/settings.SampleNum/settings.RecNum;
 
 %----------------------- 用空时导向矢量直接产生Xm -------------------------
 M             = settings.RecNum;                        % 阵元数
@@ -76,7 +81,7 @@ Xm            = zeros(N*M,L);                           % Xm向量初始化
 % Xm        = Xm + Noise;
 
 %------------------------ 手动构造Xm矢量 ----------------------------------
-for RecIndex = 1:settings.RecNum
+for RecIndex = 1:M
 
     for dataIndex = 1:L
 
@@ -92,48 +97,55 @@ end % for RecIndex = 1:settings.RecNum
 
 %------------------------ 计算加权矢量 ------------------------------------
 % 协方差矩阵
-Rx       = Xm*Xm'./L;  
+Rx       = Xm*Xm'./L;
 
-S_st     = exp(1i*(2*pi*settings.IF*settings.ts) .* (0:N-1).');
+% 空域约束
+S_s      = exp(-1i*pi*settings.d*sind(settings.Stheta).*(0:M-1).');
 
-% 空域信号方向约束
-S_ss     = exp(1i*(2*pi*settings.d*sin(settings.Stheta*pi/180)/settings.lambda) ...
-         .* (0:settings.RecNum-1).');
+S_t      = exp(1i*2*pi*settings.IF*settings.ts.*(0:N-1).');
 
-S        = kron(S_ss,S_st);
+S        = kron(S_s,S_t);
 
-% 功率倒置方法
+% % % 功率倒置方法
 % S        = zeros(M*N,1);
 % S(1)     = 1;
 
-
 w_opt    = (S'*inv(Rx)*S)^(-1)*inv(Rx)*S;
 
-%------------------- 只画出中频处的阵列响应图 -----------------------------
-Theta    = -100:0.5:100;
-Value    = zeros(1,length(Theta));
-for index = 1:length(Theta)
-
-    theta = Theta(index)*pi/180;
+%------------------------- 空频二维阵列响应图 -----------------------------
+Theta    = -100:0.1:100;
+% 模拟域频率
+f        = -settings.fs/2 + (0:settings.N-1).*(settings.fs/settings.N);
+fc       = f + settings.fc;
+Value    = zeros(settings.N,length(Theta));
+for thetaIndex = 1:length(Theta)
     
-    % 当前入射方向的空域导向矢量
-    S_s   = exp(1i*(2*pi*settings.d*sin(theta)/settings.lambda) ...
-          .*(0:settings.RecNum-1).');
+    theta = Theta(thetaIndex)*pi/180;
 
-    % 当前角度的空时导向矢量
-    S     = kron(S_s,S_st);
-    
-    Value(index) = w_opt'*S;
+    for fIndex = 1:settings.N
+        
+        % 当前入射方向的空域导向矢量
+        S_s   = exp(-1i*(2*pi*settings.d*fc(fIndex)*sin(theta)/settings.c) ...
+            .*(0:settings.RecNum-1).');
+        
+        S_t   = exp(1i*2*pi*f(fIndex)*settings.ts.*(0:N-1).');
+        
+        Value(fIndex,thetaIndex) = w_opt'*kron(S_s,S_t);
+        
+    end % for fIndex = 1:settings.N
 
 end % for index = 1:length(Theta)
 
 Value_dB = 20*log10(abs(Value));
+
 figure(102)
-plot(Theta,Value_dB);
-grid on
-
-
-
-
-
-
+h1 = surfc(Theta,f./1e6,Value_dB);
+h1(2).LevelList = linspace(-90,-40,6);
+shading interp;
+colormap(jet);
+h2 = colorbar;
+set(h2,'Fontsize',12);
+ylabel('频率 [MHz]');
+xlabel('方位角\phi [deg]');
+zlabel('阵列增益 [dB]');
+axis tight;

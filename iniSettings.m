@@ -24,12 +24,14 @@ settings.Stheta     = 0;                             % 期望信号入射方向 
 settings.IF         = 10e6;                          % 中频为10MHz
 settings.fs         = 60e6;                          % 采样频率60MHz
 settings.ts         = 1/settings.fs;                 % 采样周期
-settings.SampleNum  = 5000;                          % 接收信号快拍数
+settings.N          = 1024;                          % FFT点数
+settings.M          = 50;                           % 分段数
+settings.SampleNum  = settings.N*settings.M;         % 接收信号快拍数
 settings.orders     = 16;                            % 延迟单元数为16
 settings.T          = settings.SampleNum*settings.ts;
 
 %--------------------- 干扰信号参数设置 -----------------------------------
-settings.WBInNum    = 3;                             % 干扰信号数
+settings.WBInNum    = 2;                             % 干扰信号数
 settings.B          = 20e6;                          % 干扰信号带宽
 settings.mu         = settings.B/settings.T;         % 调频率
 settings.Pi         = 100e3;                         % 干扰信号功率 [W]
@@ -37,10 +39,15 @@ settings.WBIF       = ...
     [8e6,10e6,12e6];                                 % 中频间隔2MHz
 settings.BT         = settings.B*settings.T;         % 时宽带宽积 --- 1600+？似乎有点高啊
 settings.Itheta     = ...                            % 干扰信号入射方向 [deg]
-    [-20,30,50];                                   
+    [-20,30,50];
+
+%------------------------ 窗函数设置 --------------------------------------
+% settings.hw             = hanning(settings.N).';          % 汉宁窗 --- 行向量
+settings.hw             = hamming(settings.N).';          % 海明窗
+% settings.hw             = blackman(settings.N).';         % 布莱克曼窗
 
 %--------------------- 接收阵列参数设置 -----------------------------------
-settings.RecNum     = 4;                             % 四阵元均匀线列阵
+settings.RecNum     = 7;                             % 七阵元均匀线列阵
 settings.d          = settings.lambda/2;             % 阵元间距为半波长
 
 
